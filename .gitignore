@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.runtime/
+.superpowers/
+*.pyc
+.DS_Store
+*.m4a
+*.wav
+*.mp3
+*.onnx
+*.safetensors
