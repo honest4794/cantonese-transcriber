@@ -106,3 +106,38 @@ test('single-speaker mode skips the costly diarization model', () => {
   assert.equal(workers.length,1);
   assert.deepEqual(complete.turns,[{start:0,end:1,speaker:0}]);
 });
+test('speaker Worker allocation failure keeps completed text and leaves no busy state', async () => {
+  const workers=[];let failure;
+  const session=new TranscriptionSession({workerFactory:kind=>{
+    if(kind==='speakers')throw new Error('Worker allocation failed');
+    const w=new WorkerStub(kind,[]);workers.push(w);return w;
+  },onError:(message,chunks)=>failure={message,chunks}});
+  session.start(new Float32Array(16000).buffer,2);
+  workers[0].emit({type:'chunk',chunk:{tokens:['保','留'],timestamps:[0,.2],end:1}});
+  await workers[0].onmessage({data:{type:'asr-done',audio:new Float32Array(16000).buffer,duration:1}});
+  assert.equal(session.phase,'error');
+  assert.equal(failure.chunks[0].tokens.join(''),'保留');
+  assert.equal(workers[0].terminated,true);
+});
+test('failed audio transfer terminates the Worker and reports an actionable failure', () => {
+  let worker,message;
+  const session=new TranscriptionSession({workerFactory:kind=>{
+    worker=new WorkerStub(kind,[]);worker.postMessage=()=>{throw new DOMException('transfer failed','DataCloneError');};return worker;
+  },onError:value=>message=value});
+  session.start(new Float32Array(16000).buffer,0);
+  assert.equal(session.phase,'error');
+  assert.equal(worker.terminated,true);
+  assert.ok(message);
+});
+test('cancel between completed ASR and speaker startup retains complete-text status', async () => {
+  const workers=[];let complete;
+  const session=new TranscriptionSession({workerFactory:kind=>{const w=new WorkerStub(kind,[]);workers.push(w);return w;},onComplete:r=>complete=r});
+  session.start(new Float32Array(16000).buffer,2);
+  workers[0].emit({type:'chunk',chunk:{tokens:['好'],timestamps:[0],end:1}});
+  const handoff=workers[0].onmessage({data:{type:'asr-done',audio:new Float32Array(16000).buffer,duration:1}});
+  session.cancel();
+  await handoff;
+  assert.equal(complete.cancelled,true);
+  assert.equal(complete.textComplete,true);
+  assert.equal(workers.length,1);
+});

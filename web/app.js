@@ -40,7 +40,7 @@ function addRows(newRows){
 }
 function replaceRows(chunks,turns){rows=[];$('lines').replaceChildren();addRows(makeLines(chunks,turns,converter));}
 const session=new TranscriptionSession({
- workerFactory:()=>new Worker(new URL('./inference-worker.js',import.meta.url)),
+ workerFactory:()=>new Worker(new URL('./inference-worker.js?v=browser-v2',import.meta.url)),
  onPartial:chunks=>{
   for(const chunk of chunks.slice(renderedChunks))addRows(makeLines([chunk],[],converter));
   renderedChunks=chunks.length;

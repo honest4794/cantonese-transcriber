@@ -61,7 +61,6 @@ self.onmessage=async event=>{
           } finally {stream.free();}
         }
         self.postMessage({type:'progress',phase:'transcribing',message:`轉錄 ${i+1} / ${ranges.length} 段`,progress:100*(i+1)/ranges.length,processedSeconds:range.keepEnd/sampleRate});
-        await new Promise(r=>setTimeout(r,0));
       }
       recognizer.free();
       const result={type:'asr-done',duration,metrics:{loadMs:loadedAt-begin,inferenceMs:performance.now()-loadedAt}};

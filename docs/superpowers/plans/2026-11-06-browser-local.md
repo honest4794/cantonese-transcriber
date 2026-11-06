@@ -33,19 +33,19 @@
 
 **Interfaces:** Worker 接受 `{type:'transcribe'|'speakers', audio:ArrayBuffer, speakers:number}`；回傳 `progress`, `chunk`, `asr-done`, `speaker-done`, `error`。`makeLines(chunks, turns)` 與既有輸出結構一致。
 
-- [ ] RED：先測試長音訊分段涵蓋末段、講者切分、快取完整性及中止。
-- [ ] 提取官方發佈的 runtime，記錄來源／授權／雜湊；加入模型分片及快取載入。
-- [ ] 實作背景轉錄與講者分析，釋放每段及每個 Worker 的記憶體。
+- [x] RED：先測試長音訊分段涵蓋末段、講者切分、快取完整性及中止。
+- [x] 提取官方發佈的 runtime，記錄來源／授權／雜湊；加入模型分片及快取載入。
+- [x] 實作背景轉錄與講者分析，釋放每段及每個 Worker 的記憶體。
 
 ### Task 2: 介面與驗證
 
 **Files:** `web/app.js`, `web/index.html`, `web/style.css`, `README.md`。
 
-- [ ] 移除本機服務／權杖／安裝要求，改為選錄音即可執行。
-- [ ] 保留已完成文字、簡潔進度、講者、音訊定位與匯出；修改只在完整處理後開啟。
-- [ ] 真實短錄音與長音訊壓力測試；量度首載、快取及處理時間；檢查無上傳請求。
+- [x] 移除本機服務／權杖／安裝要求，改為選錄音即可執行。
+- [x] 保留已完成文字、簡潔進度、講者、音訊定位與匯出；修改只在完整處理後開啟。
+- [x] 真實短錄音與長音訊壓力測試；量度首載、快取及處理時間；檢查無上傳請求。
 
 ### Task 3: 交付
 
-- [ ] 全部舊測試與新增測試通過，獨立 code review，修正重要問題。
+- [x] 全部舊測試與新增測試通過，獨立 code review，修正重要問題。
 - [ ] Task-only commit、push、Pages 部署，核對公開資源及 GitHub Actions。
