@@ -2,6 +2,7 @@
 import argparse
 import hmac
 import json
+import mimetypes
 import secrets
 import tempfile
 import threading
@@ -9,7 +10,7 @@ import uuid
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlsplit, unquote
 
 PAGES = "https://honest4794.github.io/cantonese-transcriber/"
 WEB = Path(__file__).resolve().parent.parent / "web"
@@ -89,11 +90,12 @@ def make_server(port=8765, token=None, runner=None):
             if path.startswith("/app/") or path == "/":
                 if not self.permitted(False):
                     return
-                name = "index.html" if path in ("/", "/app/") else path.removeprefix("/app/")
-                if name not in {"index.html", "app.js", "exports.mjs", "style.css"}:
+                name = "index.html" if path == "/app/" else unquote(path.removeprefix("/app/"))
+                file = (WEB / name).resolve()
+                if not file.is_relative_to(WEB.resolve()) or not file.is_file():
                     return self.reply(404)
-                mime = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8", "exports.mjs": "text/javascript; charset=utf-8", "style.css": "text/css; charset=utf-8"}[name]
-                return self.reply(200, content=(WEB / name).read_bytes(), mime=mime)
+                mime = {".mjs":"text/javascript; charset=utf-8", ".js":"text/javascript; charset=utf-8", ".wasm":"application/wasm"}.get(file.suffix, mimetypes.guess_type(file.name)[0] or "application/octet-stream")
+                return self.reply(200, content=file.read_bytes(), mime=mime)
             if not self.permitted():
                 return
             if path == "/api/health":

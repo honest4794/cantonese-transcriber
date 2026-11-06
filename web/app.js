@@ -1,115 +1,133 @@
-import { exportTranscript, timestamp } from './exports.mjs';
+import {exportTranscript,timestamp} from './exports.mjs';
+import {makeLines} from './engine-core.mjs';
+import {TranscriptionSession} from './transcription-session.mjs';
+import {MODEL_CACHE} from './model-cache.mjs';
 
-const $ = id => document.getElementById(id);
-const fragment = new URLSearchParams(location.hash.slice(1));
-const freshToken = fragment.get('token');
-if (freshToken) {
-  sessionStorage.setItem('transcriber-token', freshToken);
-  sessionStorage.setItem('transcriber-port', fragment.get('port') || '8765');
-  history.replaceState(null, '', location.pathname + location.search);
+const $=id=>document.getElementById(id);
+// Remove old companion-server launch fragments; v2 never reads or uses tokens.
+if(location.hash.includes('token='))history.replaceState(null,'',location.pathname+location.search);
+let busy=false,selected=null,rows=[],audioUrl=null,renderedChunks=0,converter=text=>text,textComplete=false;
+let decoding=false,cancelDecode=false,decodeGeneration=0,runStart=0,textTime=null;
+let converterPromise=null;
+function error(message=''){$('error').textContent=message;$('error').hidden=!message;}
+function controls(){
+ $('start').disabled=busy||!selected||!globalThis.Worker||!globalThis.WebAssembly;
+ $('file').disabled=busy;$('speakers').disabled=busy;$('cancel').hidden=!busy;$('clear-cache').disabled=busy;
 }
-const token = sessionStorage.getItem('transcriber-token') || '';
-const portString = sessionStorage.getItem('transcriber-port') || '8765';
-const port = /^\d{1,5}$/.test(portString) && +portString > 0 && +portString < 65536 ? +portString : 8765;
-const api = `http://127.0.0.1:${port}`;
-$('local-link').href = api + '/';
-let connected = false, busy = false, selected = null, jobId = null, rows = [], audioUrl = null, timer = null;
+function duration(seconds){const s=Math.round(seconds);return s>=60?`${Math.floor(s/60)} 分 ${s%60} 秒`:`${s} 秒`;}
+function status(message,progress=null){
+ $('status-area').hidden=false;$('status').textContent=message;
+ if(progress===null){$('progress').removeAttribute('value');$('percent').textContent='';}
+ else{$('progress').value=progress;$('percent').textContent=`${Math.round(progress)}%`;}
+}
+function finish(){busy=false;decoding=false;$('cancel').disabled=false;controls();}
+function editable(allowed){for(const node of $('lines').querySelectorAll('[data-edit]'))node.contentEditable=allowed?'plaintext-only':'false';}
+function addRows(newRows){
+ const fragment=document.createDocumentFragment();
+ for(const row of newRows){
+  row.line=rows.length+1;rows.push(row);
+  const div=document.createElement('div');div.className='transcript-row';
+  const number=document.createElement('span');number.className='line-number';number.textContent=row.line;
+  const seek=document.createElement('button');seek.type='button';seek.className='seek';seek.textContent=timestamp(row.start).slice(0,8);seek.title='播放呢段錄音';
+  seek.addEventListener('click',()=>{$('audio').currentTime=row.start;$('audio').play().catch(()=>{});});
+  const speaker=document.createElement('div');speaker.className='speaker';speaker.dataset.edit='speaker';speaker.contentEditable=busy?'false':'plaintext-only';speaker.textContent=row.speaker;speaker.setAttribute('aria-label',`第 ${row.line} 行講者`);
+  speaker.addEventListener('input',()=>row.speaker=speaker.textContent.trim()||'講者不確定');
+  const words=document.createElement('div');words.className='words';words.dataset.edit='text';words.contentEditable=busy?'false':'plaintext-only';words.textContent=row.text;words.setAttribute('aria-label',`第 ${row.line} 行內容`);
+  words.addEventListener('input',()=>row.text=words.textContent);
+  div.append(number,seek,speaker,words);fragment.append(div);
+ }
+ $('lines').append(fragment);$('count').textContent=`${rows.length} 行`;$('result').hidden=!rows.length;
+}
+function replaceRows(chunks,turns){rows=[];$('lines').replaceChildren();addRows(makeLines(chunks,turns,converter));}
+const session=new TranscriptionSession({
+ workerFactory:()=>new Worker(new URL('./inference-worker.js',import.meta.url)),
+ onPartial:chunks=>{
+  for(const chunk of chunks.slice(renderedChunks))addRows(makeLines([chunk],[],converter));
+  renderedChunks=chunks.length;
+ },
+ onProgress:data=>{
+  if(data.phase==='text-done'){
+   textComplete=true;
+   textTime=data.metrics;status('文字已完成；準備講者分析',null);
+   $('result-note').textContent='文字已出；正在補講者標記，完成後即可修改。你亦可先下載文字。';
+  }else status(data.message,data.progress??null);
+ },
+ onComplete:result=>{
+  finish();replaceRows(result.chunks,result.turns);editable(true);
+  if(result.cancelled){
+   status(result.textComplete?'已停止講者分析，完整文字已保留。':'已停止，已完成嘅部分文字已保留。',null);
+   $('result-note').textContent=result.textComplete?'文字已完成，尚未分辨講者；可直接修改及下載。':'未完整轉錄；以下只包含停止前已完成嘅部分。';
+  }else{
+   const elapsed=(performance.now()-runStart)/1000;
+   status(`完成，用時 ${duration(elapsed)}`,100);
+   $('result-note').textContent='點時間播放錄音；文字同講者可以直接修改。自動結果仍需核對。';
+  }
+ },
+ onError:(message,chunks)=>{finish();replaceRows(chunks,[]);editable(true);status('未能完成；已保留辨識到嘅文字。',null);error(message);$('result-note').textContent='以下係未完成嘅初稿，可先下載保存。';},
+});
 
-function error(message = '') { $('error').textContent = message; $('error').hidden = !message; }
-function controls() { $('start').disabled = !connected || !selected || busy; $('file').disabled = busy; $('speakers').disabled = busy; $('cancel').hidden = !busy; }
-async function request(path, options = {}) {
-  const response = await fetch(api + path, { ...options, headers: { Authorization: `Bearer ${token}`, ...options.headers }, targetAddressSpace: 'loopback', cache: 'no-store' });
-  const data = await response.json();
-  if (!response.ok) {
-    const failure = new Error(data.error || '本機連接失敗');
-    failure.status = response.status;
-    throw failure;
+function select(file){
+ if(!file||busy)return;
+ if(!file.size)return error('呢個檔案係空白，請重新選擇。');
+ selected=file;error();$('file-name').textContent=file.name;
+ $('file-help').textContent=`${(file.size/1048576).toFixed(1)} MB · 點擊更換錄音`;
+ if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=URL.createObjectURL(file);$('audio').src=audioUrl;
+ $('result').hidden=true;$('status-area').hidden=true;rows=[];$('lines').replaceChildren();controls();
+}
+$('file').addEventListener('change',e=>select(e.target.files[0]));
+for(const name of ['dragover','dragleave','drop'])$('dropzone').addEventListener(name,e=>{e.preventDefault();$('dropzone').classList.toggle('drag',name==='dragover');if(name==='drop')select(e.dataTransfer.files[0]);});
+async function convertAudio(file,generation){
+ const context=new OfflineAudioContext(1,1,16000);
+ const decoded=await context.decodeAudioData(await file.arrayBuffer());
+ if(cancelDecode||generation!==decodeGeneration)throw new DOMException('已取消','AbortError');
+ if(decoded.sampleRate!==16000)throw new Error('此瀏覽器未能以模型所需格式解碼，請更新瀏覽器或試用 WAV。');
+ const mono=new Float32Array(decoded.length);
+ if(decoded.numberOfChannels===1)mono.set(decoded.getChannelData(0));
+ else{
+  const channels=Array.from({length:decoded.numberOfChannels},(_,i)=>decoded.getChannelData(i));
+  for(let offset=0;offset<mono.length;offset+=1048576){
+   if(cancelDecode||generation!==decodeGeneration)throw new DOMException('已取消','AbortError');
+   const end=Math.min(mono.length,offset+1048576);
+   for(const samples of channels)for(let i=offset;i<end;i++)mono[i]+=samples[i]/channels.length;
+   await new Promise(r=>setTimeout(r,0));
   }
-  return data;
+ }
+ return mono;
 }
-async function connect() {
-  if (!token) return;
-  try {
-    const result = await request('/api/health', { signal: AbortSignal.timeout(5000) });
-    if (result.service !== 'cantonese-transcriber') throw new Error();
-    connected = true; $('connection').textContent = '已連接本機'; $('light').classList.add('online'); $('setup').hidden = true;
-  } catch {
-    $('connection').textContent = '未連接';
-    error('未能連接本機程式。請啟動 Start.command；如瀏覽器詢問本機網絡權限，請允許。');
-  }
-  controls();
-}
-function select(file) {
-  if (!file || busy) return;
-  if (file.size > 512 * 1024 * 1024) return error('音檔上限為 512 MB，請先分段。');
-  if (!file.size) return error('呢個檔案係空白，請重新選擇。');
-  selected = file; error();
-  $('file-name').textContent = file.name;
-  $('file-help').textContent = `${(file.size / 1048576).toFixed(1)} MB · 點擊更換錄音`;
-  if (audioUrl) URL.revokeObjectURL(audioUrl);
-  audioUrl = URL.createObjectURL(file); $('audio').src = audioUrl;
-  $('result').hidden = true; rows = []; controls();
-}
-$('file').addEventListener('change', event => select(event.target.files[0]));
-for (const name of ['dragover', 'dragleave', 'drop']) $('dropzone').addEventListener(name, event => {
-  event.preventDefault(); $('dropzone').classList.toggle('drag', name === 'dragover');
-  if (name === 'drop') select(event.dataTransfer.files[0]);
+$('form').addEventListener('submit',async event=>{
+ event.preventDefault();if(!selected||busy)return;
+ busy=true;decoding=true;cancelDecode=false;renderedChunks=0;textTime=null;textComplete=false;runStart=performance.now();const generation=++decodeGeneration;
+ controls();error();rows=[];$('lines').replaceChildren();$('result').hidden=true;$('result-note').textContent='逐段顯示文字；完整處理後可修改，亦可先下載目前內容。';
+ status('讀取錄音；長錄音會自動分段',null);
+ try{
+  if(!converterPromise)converterPromise=import('./vendor/opencc.mjs').then(({Converter})=>Converter({from:'cn',to:'hk'})).catch(err=>{converterPromise=null;throw err;});
+  converter=await converterPromise;
+  if(cancelDecode||generation!==decodeGeneration)throw new DOMException('已取消','AbortError');
+  const audio=await convertAudio(selected,generation);
+  if(cancelDecode||generation!==decodeGeneration)throw new DOMException('已取消','AbortError');
+  if(!audio.length)throw new Error('錄音冇可讀取嘅音訊，請檢查檔案。');
+  decoding=false;session.start(audio.buffer,Number($('speakers').value));
+ }catch(err){
+  finish();
+  if(err.name==='AbortError')status('已取消讀取錄音。',null);
+  else{status('未能讀取錄音。',null);error(/memory|allocation|Array buffer|OOM/i.test(String(err))?'此裝置記憶體不足，請關閉其他分頁或改用電腦處理。':'無法讀取此音檔。請試用瀏覽器支援嘅 MP3、M4A 或 WAV 格式。');}
+ }
 });
-function finish() { busy = false; jobId = null; $('cancel').disabled = false; controls(); }
-function render() {
-  const fragment = document.createDocumentFragment();
-  for (const [i, row] of rows.entries()) {
-    const div = document.createElement('div'); div.className = 'transcript-row';
-    const number = document.createElement('span'); number.className = 'line-number'; number.textContent = i + 1;
-    const seek = document.createElement('button'); seek.type = 'button'; seek.className = 'seek'; seek.textContent = timestamp(row.start).slice(0, 8); seek.title = '播放呢段錄音';
-    seek.addEventListener('click', () => { $('audio').currentTime = row.start; $('audio').play().catch(() => {}); });
-    const speaker = document.createElement('div'); speaker.className = 'speaker'; speaker.contentEditable = 'plaintext-only'; speaker.textContent = row.speaker; speaker.setAttribute('aria-label', `第 ${i + 1} 行講者`);
-    speaker.addEventListener('input', () => row.speaker = speaker.textContent.trim() || '講者不確定');
-    const words = document.createElement('div'); words.className = 'words'; words.contentEditable = 'plaintext-only'; words.textContent = row.text; words.setAttribute('aria-label', `第 ${i + 1} 行內容`);
-    words.addEventListener('input', () => row.text = words.textContent);
-    div.append(number, seek, speaker, words); fragment.append(div);
-  }
-  $('lines').replaceChildren(fragment); $('count').textContent = `${rows.length} 行`; $('result').hidden = false;
-}
-async function poll() {
-  if (!jobId) return;
-  try {
-    const result = await request('/api/jobs/' + jobId, { signal: AbortSignal.timeout(10000) });
-    error();
-    $('status').textContent = result.message; $('progress').value = result.progress; $('percent').textContent = `${Math.round(result.progress)}%`;
-    if (result.status === 'done') { rows = result.lines; render(); finish(); return; }
-    if (result.status === 'error' || result.status === 'cancelled') { if (result.status === 'error') error(result.message); finish(); return; }
-    timer = setTimeout(poll, document.hidden ? 3000 : 1000);
-  } catch (err) {
-    if (err.status === 401 || err.status === 404) {
-      connected = false; $('connection').textContent = '請重新連接'; $('light').classList.remove('online'); $('setup').hidden = false;
-      error('本機程式已重新啟動，或呢次工作已結束。請從本機程式重新開啟網頁。'); finish(); return;
-    }
-    error('連接中斷。請確認本機程式仍開啟；恢復連接後會繼續讀取進度。'); timer = setTimeout(poll, 3000);
-  }
-}
-$('form').addEventListener('submit', async event => {
-  event.preventDefault(); if (!selected || busy || !connected) return;
-  busy = true; controls(); $('cancel').disabled = true; error(); $('result').hidden = true; $('status-area').hidden = false;
-  $('status').textContent = '傳送至本機程式'; $('percent').textContent = ''; $('progress').removeAttribute('value');
-  try {
-    const job = await request('/api/jobs?speakers=' + $('speakers').value, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: selected });
-    jobId = job.id; $('cancel').disabled = false; poll();
-  } catch (err) { error(err.message || '無法開始轉錄，請檢查本機程式。'); $('status').textContent = '未能開始'; $('progress').value = 0; finish(); }
+$('cancel').addEventListener('click',()=>{
+ if(decoding){cancelDecode=true;$('cancel').disabled=true;status('正在停止讀取錄音，請稍候。',null);}
+ else session.cancel();
 });
-$('cancel').addEventListener('click', async () => {
-  if (!jobId) return;
-  $('cancel').disabled = true;
-  try { await request('/api/jobs/' + jobId, { method: 'DELETE' }); $('status').textContent = '正在取消'; }
-  catch { $('cancel').disabled = false; error('取消失敗，請確認本機程式仍開啟。'); }
+$('download').addEventListener('click',()=>{
+ if(!rows.length)return;
+ const format=$('format').value,content=exportTranscript(rows,format);
+ const blob=new Blob([content],{type:format==='csv'?'text/csv;charset=utf-8':'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+ link.href=url;link.download=(selected?.name.replace(/\.[^.]+$/,'')||'錄音')+`-粵語${!textComplete?'部分':''}逐字稿.`+format;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
-$('download').addEventListener('click', () => {
-  if (!rows.length) return;
-  const format = $('format').value, content = exportTranscript(rows, format);
-  const blob = new Blob([content], { type: format === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url;
-  link.download = (selected?.name.replace(/\.[^.]+$/, '') || '錄音') + '-粵語逐字稿.' + format;
-  link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+$('clear-cache').addEventListener('click',async()=>{
+ if(busy)return;
+ try{await caches.delete(MODEL_CACHE);$('cache-note').textContent='已清除模型快取，下次使用會重新載入。';}
+ catch{$('cache-note').textContent='此瀏覽器暫時無法管理快取，仍可直接轉錄。';}
 });
-window.addEventListener('beforeunload', event => { if (busy) { event.preventDefault(); event.returnValue = ''; } });
-connect();
+window.addEventListener('beforeunload',event=>{if(busy){event.preventDefault();event.returnValue='';}});
+if(!globalThis.Worker||!globalThis.WebAssembly){$('connection').textContent='請更新瀏覽器';$('light').classList.remove('online');error('此瀏覽器未支援所需功能，請使用較新版本嘅 Chrome、Edge、Firefox 或 Safari。');}
+controls();

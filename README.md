@@ -1,67 +1,62 @@
 # 粵語轉錄
 
-[開啟網頁](https://honest4794.github.io/cantonese-transcriber/)
+**[開啟網頁直接使用](https://honest4794.github.io/cantonese-transcriber/)**
 
-簡單的本機粵語轉錄工具。先啟動 Mac 程式，再於網頁選擇錄音。支援行號、時間戳、講者標記、直接修改，以及 TXT／CSV／SRT 下載。
+免費、免安裝的瀏覽器本機粵語轉錄工具。錄音不會上傳，沒有付費 API、訂閱或雲端轉錄時數額度。
 
-錄音只傳到你自己電腦的 `127.0.0.1`，不會傳至 GitHub 或其他雲端。GitHub Pages 只提供操作介面。
+## 使用
 
-## 安裝與使用
+1. 開啟網頁，選擇錄音。
+2. 選講者人數，按「開始轉錄」。「不分講者」較快；只有一位講者時不會載入額外講者模型。
+3. 文字會逐段出現，文字完成後再補講者標記。處理途中可先下載文字，或停止並保留已完成的部分。
+4. 完成後直接修改文字／講者，下載 TXT、CSV 或 SRT。點時間可播放對應錄音。
 
-1. 安裝 **Python 3.11 或以上**及 **FFmpeg**。使用 Homebrew 可執行：
+**不需要 Python、FFmpeg、Start.command、API Key 或 AI 帳戶。** 網站本身已包含模型及運算程式。首次使用會自動載入約 250–310 MB 模型資源，之後盡量重用瀏覽器快取；清除瀏覽器資料後需要重新載入。
 
-   ```sh
-   brew install python@3.12 ffmpeg
-   ```
+## 長錄音與速度
 
-2. 下載此 repository 的 ZIP 並解壓，或執行：
+- 沒有每日使用分鐘或錄音時長配額。音訊以約 15 秒一段處理，不必等整段完成才看到文字。
+- 轉錄及講者分析由背景 Web Worker 執行。兩個大型模型依次載入，避免同時佔用大量記憶體。
+- 錄音仍須由瀏覽器讀取及解碼，因此可處理的長度受裝置記憶體、音訊格式及瀏覽器限制。長錄音建議使用電腦，並保持分頁開啟；不保證所有舊手機都能處理任意長度。
+- 第一次模型下載、模型初始化、實際轉錄是不同階段。網絡、硬件及錄音內容均會影響時間，不能保證與其他網站等速。
+- 模型只略過完全為零的數碼靜音，不會因為說話細聲而自行丟棄該段。
 
-   ```sh
-   git clone https://github.com/honest4794/cantonese-transcriber.git
-   cd cantonese-transcriber
-   chmod +x Start.command
-   ./Start.command
-   ```
+## 支援與資料
 
-3. 之後雙擊 `Start.command` 即可。程式會自動開啟網頁，請保留終端機視窗。若 macOS 不允許雙擊，請在終端機進入該資料夾執行 `bash Start.command`。
-4. 選錄音及講者人數，按「開始轉錄」。首次使用需要連線下載約 285 MB 模型；之後使用本機模型。
-5. 完成後核對及修改文字／講者，選擇格式下載。點時間可播放對應錄音。
+使用較新版本、支援 WebAssembly SIMD 及 Web Worker 的 Chrome、Edge、Firefox 或 Safari。MP3、M4A、WAV 等能否讀取，取決於瀏覽器的音訊解碼支援。
 
-瀏覽器首次可能詢問「本機網絡」或「Loopback network」權限，請允許。如果 Pages 無法連接，使用同一個本機介面：
+所有音訊解碼、語音識別、講者分析及匯出都在裝置內完成。網頁只會下載公開程式與模型檔案，不會把錄音傳到 GitHub、Hugging Face 或 AI 伺服器。模型由 GitHub Pages 同源提供，分片及 SHA-256 檢查避免損壞快取進入推論。
+
+逐字稿只保留在目前分頁，關閉前請下載保存。若發生錯誤或按停止，已完成文字會保留；不完整稿件會在畫面及下載檔名標示。網站的「清除模型快取」只清除此工具的模型快取。
+
+輸出是**自動轉錄初稿**；英文、專有名詞、遠距錄音、重疊語音及講者歸屬需要對照錄音核對。
+
+## 模型與授權
+
+- 語音識別：SenseVoiceSmall（FunAudioLLM／阿里巴巴），INT8，透過 sherpa-onnx v1.12.35 官方 WebAssembly SIMD 發佈包。
+- 講者分析：pyannote segmentation 3.0 與 3D-Speaker ERes2Net，透過 sherpa-onnx v1.13.7 官方發佈包。
+- 繁體轉換：OpenCC JS v1.4.2。
+- 本專案程式碼採 MIT；模型及第三方 runtime 採各自授權。SenseVoice 模型依 FunASR Model Open Source License Agreement 提供，並非本專案的 MIT 授權。
+
+完整來源與授權見 [NOTICE](web/vendor/NOTICE.txt)；模型分片、大小及雜湊見 [models.json](web/models.json)。公開發佈包的預載 `.data` 內容保持原樣，只拆分為小於 50 MiB 的靜態檔案。
+
+## 開發
+
+靜態網站位於 `web/`，可用任何靜態 HTTP 伺服器預覽：
 
 ```sh
-./Start.command --local
+python3 -m http.server 8080 --directory web
+node --test tests/*.test.mjs
 ```
 
-預設連接埠為 `8765`；需要更改可執行 `./Start.command --port 8766`。關閉終端機前可按 **Control-C** 取消工作並停止服務。
-
-## 轉錄與講者
-
-- 支援 FFmpeg 可讀取的 M4A、MP3、WAV、AAC、FLAC、MP4 等格式，檔案上限 512 MB，錄音上限四小時。
-- 使用 SenseVoice `zh-en-ja-ko-yue-int8-2025-09-09` 進行粵語識別，再轉為繁體字。
-- 使用 sherpa-onnx 的 pyannote segmentation 3.0 與 3D-Speaker 模型分辨講者，按照首次出現標為 A、B 等。
-- 講者人數需要按錄音設定，預設兩位。「不分講者」較快。長錄音的講者分析可能需要較多時間，網頁會持續顯示進度。
-- **結果是自動轉錄初稿**。口音、遠距錄音、英文、專有名詞、重疊說話及講者歸屬可能有錯，需要對照錄音核對。
-- 網頁編輯結果只留在目前分頁；請在關閉或更換錄音前下載。重新整理網頁不會保留稿件。
-
-## 資料與模型位置
-
-- 音檔及解碼檔案只放在每次工作獨立的系統暫存資料夾；完成、取消或失敗後自動移除。強制結束程式或斷電可能留下暫存。
-- 模型保存在 `~/Library/Application Support/CantoneseTranscriber/models`，屬於可重用的安裝檔案。
-- Python 套件保存在 repository 內的 `.venv`，不提交至 GitHub。
-- 移除模型：停止程式後執行 `.venv/bin/python -m transcriber.server --clear-models`；下次轉錄會重新下載。
-- 服務只監聽本機，API 使用每次啟動新產生的權杖，限制網頁來源及 Host。權杖經 URL fragment 交給前端後立即從網址移除，請勿分享啟動時尚未移除 fragment 的網址。
-
-## 開發與驗證
+如要執行保留的舊 Python 伴隨服務測試：
 
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python -m unittest discover -s tests -v
-node --test tests/exports.test.mjs
-.venv/bin/python -m transcriber.server --local
 ```
 
-Pages 由 GitHub Actions 發佈 `web/`。後端 Python 不在 GitHub 執行。
+舊 Mac 伴隨服務程式保留作開發及比較，公開網站已不依賴它。重新包裝模型可用 `tools/package-browser-assets.py`；來源為官方 sherpa-onnx GitHub release，正常使用者毋須執行。
 
-模型來源及原授權請見 [SenseVoice](https://github.com/FunAudioLLM/SenseVoice)、[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) 與 [pyannote segmentation](https://huggingface.co/pyannote/segmentation-3.0)。本專案程式碼採 MIT 授權；模型適用各自的授權條款。
+GitHub Actions 驗證程式後發佈 `web/` 至 Pages。

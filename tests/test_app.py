@@ -152,6 +152,15 @@ class ServerTests(unittest.TestCase):
             r.read()
             c.close()
 
+    def test_browser_assets_are_served_without_escaping_web_directory(self):
+        for path, expected in [("/app/engine-core.mjs", 200), ("/app/vendor/NOTICE.txt", 200), ("/app/../README.md", 404), ("/app/%2e%2e/.git/config", 404)]:
+            c = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
+            c.request("GET", path)
+            r = c.getresponse()
+            self.assertEqual(r.status, expected, path)
+            r.read()
+            c.close()
+
 
 if __name__ == "__main__":
     unittest.main()

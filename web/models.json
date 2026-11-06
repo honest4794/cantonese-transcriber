@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "sampleRate": 16000,
+  "models": {
+    "asr": {
+      "runtime": "./vendor/asr-runtime.js",
+      "api": "./vendor/asr-api.js",
+      "wasm": {
+        "url": "./assets/asr-1.12.35/runtime.wasm",
+        "bytes": 11869449,
+        "sha256": "ba5f9e8d8e20c8f2d24968fe111947401caa0323604a84e78697b9f69f90badb"
+      },
+      "data": [
+        {
+          "url": "./assets/asr-1.12.35/model-00.bin",
+          "bytes": 50331648,
+          "sha256": "eb86181ef078a7d7410a17d8b83bae1ca33fe2eae25faf6b6b2c02eb027a4a3c"
+        },
+        {
+          "url": "./assets/asr-1.12.35/model-01.bin",
+          "bytes": 50331648,
+          "sha256": "b73de306a3a86cfb77c7b8c681a4b8e9d13450902cc9b5e4dac4aacc4cc552d6"
+        },
+        {
+          "url": "./assets/asr-1.12.35/model-02.bin",
+          "bytes": 50331648,
+          "sha256": "5496ce361e0a69c6c2cce070ad44e4c8ae4598c7956503b973010ca4fa346b3e"
+        },
+        {
+          "url": "./assets/asr-1.12.35/model-03.bin",
+          "bytes": 50331648,
+          "sha256": "d8d5501cd225054643916072259c5d860fd7c67eea930cf38212497df0604ff9"
+        },
+        {
+          "url": "./assets/asr-1.12.35/model-04.bin",
+          "bytes": 38866997,
+          "sha256": "2d80a5a9f62f78bdc782192d7d0a0402eaf9fff561bb0d3955bf54548641bcdc"
+        }
+      ],
+      "dataName": "sherpa-onnx-wasm-main-vad-asr.data",
+      "dataBytes": 240193589,
+      "dataSha256": "4c063aa4af215b02b6c127f3b7be8ae8405ff1285a18117e746f4abe53e5b3be",
+      "sherpaVersion": "1.12.35"
+    },
+    "speakers": {
+      "runtime": "./vendor/speakers-runtime.js",
+      "api": "./vendor/speakers-api.js",
+      "wasm": {
+        "url": "./assets/speakers-1.13.7/runtime.wasm",
+        "bytes": 12364192,
+        "sha256": "d99e64e62f2d78652457bf45cb7608181fcd70efed47d3e9d23c862372305eb6"
+      },
+      "data": [
+        {
+          "url": "./assets/speakers-1.13.7/model-00.bin",
+          "bytes": 45587685,
+          "sha256": "59961f3445655861b8dbb9bcb5504bfb4ebd7ff08f734868d9642e302fee7088"
+        }
+      ],
+      "dataName": "sherpa-onnx-wasm-main-speaker-diarization.data",
+      "dataBytes": 45587685,
+      "dataSha256": "59961f3445655861b8dbb9bcb5504bfb4ebd7ff08f734868d9642e302fee7088",
+      "sherpaVersion": "1.13.7"
+    }
+  }
+}

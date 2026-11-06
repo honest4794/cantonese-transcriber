@@ -1,0 +1,47 @@
+Third-party browser inference assets
+
+This website runs all audio inference on the user's device. It does not use a
+paid inference API. The following prebuilt resources are redistributed with
+their applicable upstream licenses; the MIT license of this application does
+not replace model or runtime licenses.
+
+sherpa-onnx ASR runtime/API: v1.12.35, Apache-2.0
+https://github.com/k2-fsa/sherpa-onnx
+Official release bundle:
+sherpa-onnx-wasm-simd-1.12.35-vad-asr-zh_en_ja_ko_cantonese-sense_voice_small.tar.bz2
+
+sherpa-onnx speaker diarization runtime/API: v1.13.7, Apache-2.0
+Official release bundle:
+sherpa-onnx-wasm-simd-v1.13.7-speaker-diarization.tar.bz2
+
+The JavaScript loaders and WebAssembly files are unmodified upstream release
+files. The original .data preload packages are split into <50MiB static files;
+models.json records exact sizes and SHA-256 checksums for reassembly.
+
+SenseVoiceSmall model: FunAudioLLM / Tongyi Lab, original model and model card
+https://github.com/FunAudioLLM/SenseVoice
+https://huggingface.co/FunAudioLLM/SenseVoiceSmall
+The weights use the FunASR Model Open Source License Agreement, not this app's
+MIT license. See SenseVoice-MODEL-LICENSE.txt; source, author and model names
+are retained here and in the website's model manifest.
+
+Silero VAD model bundled in the upstream ASR package: MIT
+https://github.com/snakers4/silero-vad
+
+pyannote segmentation 3.0 model: MIT (per upstream model card)
+https://huggingface.co/pyannote/segmentation-3.0
+
+Speaker embedding model from the official sherpa-onnx diarization bundle:
+3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
+3D-Speaker, Alibaba Group / ModelScope (Apache-2.0)
+https://github.com/modelscope/3D-Speaker
+See 3D-Speaker-LICENSE.txt.
+
+ONNX Runtime: Microsoft, MIT
+https://github.com/microsoft/onnxruntime
+See onnxruntime-LICENSE.txt.
+
+OpenCC JS: v1.4.2, MIT AND Apache-2.0
+https://github.com/nk2028/opencc-js
+https://github.com/BYVoid/OpenCC
+See opencc-LICENSE.txt and sherpa-LICENSE.txt (Apache-2.0 text).
