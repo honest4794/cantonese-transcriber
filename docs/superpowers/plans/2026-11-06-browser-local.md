@@ -48,4 +48,6 @@
 ### Task 3: 交付
 
 - [x] 全部舊測試與新增測試通過，獨立 code review，修正重要問題。
-- [ ] Task-only commit、push、Pages 部署，核對公開資源及 GitHub Actions。
+- [x] Task-only commit、push、Pages 部署，核對公開資源及 GitHub Actions。
+
+交付驗證：程式版本 `74d0725` 的 [GitHub Actions](https://github.com/honest4794/cantonese-transcriber/actions/runs/42223242092) 成功；公開 HTML、JS、CSS、模型清單與本機版本一致，全部模型分片的公開大小及檔案開頭均符合。網址：https://honest4794.github.io/cantonese-transcriber/
