@@ -20,7 +20,11 @@ function controls() { $('start').disabled = !connected || !selected || busy; $('
 async function request(path, options = {}) {
   const response = await fetch(api + path, { ...options, headers: { Authorization: `Bearer ${token}`, ...options.headers }, targetAddressSpace: 'loopback', cache: 'no-store' });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || '本機連接失敗');
+  if (!response.ok) {
+    const failure = new Error(data.error || '本機連接失敗');
+    failure.status = response.status;
+    throw failure;
+  }
   return data;
 }
 async function connect() {
@@ -76,7 +80,13 @@ async function poll() {
     if (result.status === 'done') { rows = result.lines; render(); finish(); return; }
     if (result.status === 'error' || result.status === 'cancelled') { if (result.status === 'error') error(result.message); finish(); return; }
     timer = setTimeout(poll, document.hidden ? 3000 : 1000);
-  } catch { error('連接中斷。請確認本機程式仍開啟；恢復連接後會繼續讀取進度。'); timer = setTimeout(poll, 3000); }
+  } catch (err) {
+    if (err.status === 401 || err.status === 404) {
+      connected = false; $('connection').textContent = '請重新連接'; $('light').classList.remove('online'); $('setup').hidden = false;
+      error('本機程式已重新啟動，或呢次工作已結束。請從本機程式重新開啟網頁。'); finish(); return;
+    }
+    error('連接中斷。請確認本機程式仍開啟；恢復連接後會繼續讀取進度。'); timer = setTimeout(poll, 3000);
+  }
 }
 $('form').addEventListener('submit', async event => {
   event.preventDefault(); if (!selected || busy || !connected) return;

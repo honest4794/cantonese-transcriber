@@ -32,9 +32,9 @@
 
 **Interfaces:** `transcribe(path, speakers, update, cancelled) -> list[dict]`；`make_server(port, token, runner) -> ThreadingHTTPServer`；API `/api/health`, `/api/jobs`, `/api/jobs/<id>`。
 
-- [ ] 先寫並執行行號／講者／時間分配及 API 權限、忙碌、清理測試，確認未實作時失敗。
-- [ ] 實作背景任務、上傳、取消、驗證；SenseVoice 與已知人數的 pyannote/3D-Speaker 分組。
-- [ ] 執行 `python3 -m unittest discover -s tests -v`，確認通過；commit。
+- [x] 先寫並執行行號／講者／時間分配及 API 權限、忙碌、清理測試，確認未實作時失敗。
+- [x] 實作背景任務、上傳、取消、驗證；SenseVoice 與已知人數的 pyannote/3D-Speaker 分組。
+- [x] 執行 `python3 -m unittest discover -s tests -v`，確認通過；commit。
 
 ### Task 2: 簡潔操作與本機啟動
 
@@ -42,14 +42,14 @@
 
 **Interfaces:** 使用 Task 1 API；啟動時開啟 Pages 並以 URL fragment 傳遞權杖，網頁立即移除 fragment。
 
-- [ ] 實作白底、青綠操作鍵、系統字體、單欄操作與寬版逐字稿；沒有動畫或外部字體。
-- [ ] 完成連接、上傳、進度、取消、音訊定位、編輯、TXT/CSV/SRT 下載。
-- [ ] 以瀏覽器檢查桌面／窄版及錯誤狀態，並用真實短音訊測試本機轉錄；commit。
+- [x] 實作白底、青綠操作鍵、系統字體、單欄操作與寬版逐字稿；沒有動畫或外部字體。
+- [x] 完成連接、上傳、進度、取消、音訊定位、編輯、TXT/CSV/SRT 下載。
+- [x] 以瀏覽器檢查桌面／窄版及錯誤狀態，並用真實短音訊測試本機轉錄；commit。
 
 ### Task 3: 發佈
 
 **Files:** `.github/workflows/pages.yml`。
 
-- [ ] 執行完整測試、JavaScript 語法檢查及獨立 code review，修正重要問題。
-- [ ] 建立公開 `honest4794/cantonese-transcriber`，僅 push 本次程式及文件。
+- [x] 執行完整測試、JavaScript 語法檢查及獨立 code review，修正重要問題。
+- [x] 建立公開 `honest4794/cantonese-transcriber`，僅 push 本次程式及文件。
 - [ ] 啟用 Pages，確認 Actions 成功及公開網址回傳正確內容，開啟 repository 與 Pages。

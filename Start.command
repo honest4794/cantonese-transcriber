@@ -4,7 +4,11 @@ cd "$(dirname "$0")"
 export PIP_DISABLE_PIP_VERSION_CHECK=1
 if [ ! -x .venv/bin/python ]; then
   TRANSCRIBER_PYTHON=""
-  for candidate in /opt/homebrew/opt/python@3.12/bin/python3.12 /usr/local/bin/python3 /opt/homebrew/bin/python3 python3; do
+  TRANSCRIBER_BREW_PREFIX=""
+  if command -v brew >/dev/null 2>&1; then
+    TRANSCRIBER_BREW_PREFIX="$(brew --prefix python@3.12 2>/dev/null || true)"
+  fi
+  for candidate in "$TRANSCRIBER_BREW_PREFIX/bin/python3.12" /opt/homebrew/opt/python@3.12/bin/python3.12 /usr/local/opt/python@3.12/bin/python3.12 /usr/local/bin/python3.12 /opt/homebrew/bin/python3.12 /usr/local/bin/python3 /opt/homebrew/bin/python3 python3; do
     if "$candidate" -c 'import sys; assert sys.version_info >= (3, 11)' >/dev/null 2>&1; then
       TRANSCRIBER_PYTHON="$candidate"
       break

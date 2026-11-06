@@ -3,6 +3,12 @@ import json
 import threading
 import time
 import unittest
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
 from pathlib import Path
 
 
@@ -15,6 +21,35 @@ class TranscriptTests(unittest.TestCase):
         self.assertEqual([r["speaker"] for r in rows], ["講者 A", "講者 B"])
         self.assertEqual([r["text"] for r in rows], ["我唔係", "嗯"])
         self.assertEqual([r["line"] for r in rows], [1, 2])
+
+
+class LauncherTests(unittest.TestCase):
+    def test_launcher_uses_python_from_homebrew_prefix(self):
+        # Simulate a versioned Intel/custom-prefix Homebrew installation, using
+        # a real Python/venv and a tiny local app to exercise the entire launcher.
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            shutil.copy(Path(__file__).parents[1] / "Start.command", root / "Start.command")
+            (root / "requirements.txt").write_text("")
+            (root / "transcriber").mkdir()
+            (root / "transcriber/server.py").write_text("print('LAUNCH_OK')\n")
+            binary = root / "bin"
+            python_bin = root / "Homebrew Python/bin"
+            binary.mkdir()
+            python_bin.mkdir(parents=True)
+            marker = root / "chosen-python"
+            scripts = {
+                binary / "brew": "#!/bin/sh\nprintf '%s\\n' " + shlex.quote(str(python_bin.parent)) + "\n",
+                binary / "ffmpeg": "#!/bin/sh\nexit 0\n",
+                python_bin / "python3.12": "#!/bin/sh\nprintf selected > " + shlex.quote(str(marker)) + "\nexec " + shlex.quote(sys.executable) + ' "$@"\n',
+            }
+            for path, content in scripts.items():
+                path.write_text(content)
+                path.chmod(0o755)
+            result = subprocess.run(["bash", "Start.command", "--no-open"], cwd=root, env={**os.environ, "PATH": str(binary) + ":/usr/bin:/bin"}, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=45)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("LAUNCH_OK", result.stdout)
+            self.assertTrue(marker.exists(), "Launcher ignored the Homebrew-installed Python")
 
 
 class ServerTests(unittest.TestCase):
@@ -57,6 +92,10 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.request("POST", "/api/jobs?speakers=2", b"audio", origin="https://evil.example")[0], 403)
         self.assertEqual(self.request("POST", "/api/jobs?speakers=2", b"audio", token="wrong")[0], 401)
         self.assertFalse(self.started.is_set())
+
+    def test_expired_session_is_not_reported_as_connected(self):
+        self.assertEqual(self.request("GET", "/api/health", token="old-session")[0], 401)
+        self.assertEqual(self.request("GET", "/api/health")[0], 200)
 
     def test_job_does_not_block_status_and_removes_uploaded_audio(self):
         code, job = self.request("POST", "/api/jobs?speakers=2", b"audio")

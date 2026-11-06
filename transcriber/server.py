@@ -94,7 +94,7 @@ def make_server(port=8765, token=None, runner=None):
                     return self.reply(404)
                 mime = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8", "exports.mjs": "text/javascript; charset=utf-8", "style.css": "text/css; charset=utf-8"}[name]
                 return self.reply(200, content=(WEB / name).read_bytes(), mime=mime)
-            if not self.permitted(path != "/api/health"):
+            if not self.permitted():
                 return
             if path == "/api/health":
                 return self.reply(200, {"service": "cantonese-transcriber", "version": 1})
