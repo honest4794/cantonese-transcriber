@@ -1,0 +1,5 @@
+sherpa-onnx==2.0.1
+numpy>=2.0,<3
+soundfile>=0.13,<1
+opencc-python-reimplemented==0.1.7
+requests>=2.32,<3
