@@ -52,4 +52,4 @@
 
 - [x] 執行完整測試、JavaScript 語法檢查及獨立 code review，修正重要問題。
 - [x] 建立公開 `honest4794/cantonese-transcriber`，僅 push 本次程式及文件。
-- [ ] 啟用 Pages，確認 Actions 成功及公開網址回傳正確內容，開啟 repository 與 Pages。
+- [x] 啟用 Pages，確認 Actions 成功及公開網址回傳正確內容，開啟 repository 與 Pages。
