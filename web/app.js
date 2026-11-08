@@ -4,6 +4,10 @@ import {TranscriptionSession} from './transcription-session.mjs?v=gpu-v1';
 import {MODEL_CACHE} from './model-cache.mjs';
 
 const $=id=>document.getElementById(id);
+// A cached v2 page can fetch the current module before its HTML is refreshed.
+if(!$('timings')){
+ const node=document.createElement('p');node.id='timings';node.className='timings';node.hidden=true;$('status-area').append(node);
+}
 // Remove old companion-server launch fragments; v2 never reads or uses tokens.
 if(location.hash.includes('token='))history.replaceState(null,'',location.pathname+location.search);
 let busy=false,selected=null,rows=[],audioUrl=null,renderedChunks=0,converter=text=>text,textComplete=false;
