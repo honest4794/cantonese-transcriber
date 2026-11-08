@@ -31,10 +31,10 @@
 
 **Interfaces:** `Fbank.process(samples)` 回傳 `{features,frames}`；`senseVoiceFeatures(samples,cmvn)` 回傳 560 維 LFR／CMVN；GPU Worker 使用現有 chunk／progress／asr-done／speaker-done 訊息。
 
-- [ ] 先寫黃金特徵、CTC 時間戳、短尾段及 GPU 失效保留文字測試，確認 RED。
-- [ ] 實作 GPU ASR；以同一段真實粵語對照 WASM／FP32，記錄實際 GPU dispatch。
-- [ ] 實測講者模型 GPU 運算；只整合有結果核對及速度改善的路徑。
-- [ ] 包裝已驗證模型分片及授權，跑測試及完整性檢查，commit 本次檔案。
+- [x] 先寫黃金特徵、CTC 時間戳、短尾段及 GPU 失效保留文字測試，確認 RED。
+- [x] 實作 GPU ASR；以同一段真實粵語對照 WASM／FP32，記錄實際 GPU dispatch。
+- [x] 實測講者模型 GPU 運算；只整合有結果核對及速度改善的路徑。
+- [x] 包裝已驗證模型分片及授權，跑測試及完整性檢查，commit 本次檔案。
 
 ### Task 2: 自動選擇、長錄音驗證及發佈
 
@@ -42,7 +42,9 @@
 
 **Interfaces:** 延用 Task 1 Worker 訊息；GPU 失效重試不重複已完成 chunk。
 
-- [ ] 先測試不支援 GPU、初始化失敗、運算中失敗、取消及過期訊息。
-- [ ] 接上自動選擇及清楚分項耗時；保留原本簡單版面。
-- [ ] 真實完整 40 分鐘錄音驗證時間、逐段文字、尾段、講者、取消及匯出；記錄限制。
+- [x] 先測試不支援 GPU、初始化失敗、運算中失敗、取消及過期訊息。
+- [x] 接上自動選擇及清楚分項耗時；保留原本簡單版面。
+- [x] 真實完整 40 分鐘錄音驗證時間、逐段文字、尾段、講者、取消及匯出；記錄限制。
 - [ ] 全部測試、獨立 review、task-only commit／push／Pages 公開檔案驗證。
+
+實際驗證：39 項 Node、10 項 Python 測試通過；獨立 reviewer 核准 `f3157fa`，無待修問題。40 分 21 秒真實錄音在完整網頁約 3 分 16 秒完成（M2／8GB／Chrome157／低電量模式；首次網絡下載另計），892 行、390px 無橫向溢出，修改後 TXT／CSV／SRT 均通過。真實 GPUDevice.destroy 注入後，自動啟動兩個 CPU 階段完成餘下文字及講者；取消則保留初稿，三種匯出均標示部分稿件。
