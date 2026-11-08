@@ -6,8 +6,8 @@
   <meta name="referrer" content="no-referrer">
   <meta name="description" content="免費免安裝粵語轉錄：直接在瀏覽器運算，錄音不上傳，長錄音自動分段。">
   <title>粵語轉錄</title>
-  <link rel="stylesheet" href="./style.css?v=browser-v2">
-  <script type="module" src="./app.js?v=browser-v2"></script>
+  <link rel="stylesheet" href="./style.css?v=gpu-v1">
+  <script type="module" src="./app.js?v=gpu-v1"></script>
 </head>
 <body>
 <main>
@@ -16,7 +16,7 @@
     <label class="file-zone" id="dropzone"><input type="file" id="file" accept="audio/*,video/*,.m4a,.mp3,.wav,.aac,.flac,.ogg,.mp4,.mov,.webm"><strong id="file-name">選擇錄音</strong><span id="file-help">或將檔案拖到呢度 · 長錄音自動分段</span></label>
     <div class="actions"><label>講者人數 <select id="speakers"><option value="2">2 位</option><option value="3">3 位</option><option value="4">4 位</option><option value="1">1 位</option><option value="0">不分講者（較快）</option></select></label><div><button id="cancel" type="button" class="secondary" hidden>取消</button><button id="start" type="submit" disabled>開始轉錄</button></div></div>
   </form>
-  <section id="status-area" aria-live="polite" hidden><div class="progress-label"><span id="status">準備中</span><span id="percent"></span></div><progress id="progress" max="100" value="0"></progress></section>
+  <section id="status-area" aria-live="polite" hidden><div class="progress-label"><span id="status">準備中</span><span id="percent"></span></div><progress id="progress" max="100" value="0"></progress><p id="timings" class="timings" hidden></p></section>
   <p id="error" role="alert" hidden></p>
   <section id="result" hidden>
     <div class="result-heading"><div><h2>逐字稿 <span id="count"></span></h2><p id="result-note">點時間播放錄音；文字同講者可以直接修改。自動結果仍需核對。</p></div><div class="exports"><label class="sr-only" for="format">下載格式</label><select id="format"><option value="txt">文字 TXT</option><option value="csv">表格 CSV</option><option value="srt">字幕 SRT</option></select><button id="download" type="button" class="secondary">下載</button></div></div>
@@ -24,7 +24,7 @@
     <div class="transcript-head"><span>行</span><span>時間</span><span>講者</span><span>內容</span></div>
     <div id="lines"></div>
   </section>
-  <details class="model-info"><summary>首次使用與模型快取</summary><p>首次會自動載入約 250–310 MB 模型，之後重用瀏覽器快取。沒有付費 API 或雲端轉錄時數額度；速度及可處理長度受裝置效能與記憶體影響。長錄音期間請保持分頁開啟。模型：SenseVoiceSmall（FunAudioLLM／阿里巴巴）、sherpa-onnx。<a href="./vendor/NOTICE.txt" target="_blank" rel="noreferrer">模型來源與授權</a></p><div class="cache-actions"><button id="clear-cache" type="button" class="secondary">清除模型快取</button><span id="cache-note">清除後下次會重新載入。</span></div></details>
+  <details class="model-info"><summary>首次使用與模型快取</summary><p>支援時自動使用 GPU 加速；未能使用時自動改用 CPU。首次會載入約 250–600 MB 模型，之後重用瀏覽器快取；GPU 失敗而改用 CPU 時可能額外載入 CPU 模型。沒有付費 API 或雲端轉錄時數額度；速度及可處理長度受裝置效能與記憶體影響。長錄音期間請保持分頁開啟。模型：SenseVoiceSmall（FunAudioLLM／阿里巴巴）、pyannote／3D-Speaker。<a href="./vendor/NOTICE.txt" target="_blank" rel="noreferrer">模型來源與授權</a></p><div class="cache-actions"><button id="clear-cache" type="button" class="secondary">清除模型快取</button><span id="cache-note">清除後下次會重新載入。</span></div></details>
   <footer><a href="https://github.com/honest4794/cantonese-transcriber" target="_blank" rel="noreferrer">程式碼與使用說明</a><span>本機處理 · 無雲端上傳</span></footer>
 </main>
 </body>

@@ -11,14 +11,15 @@
 3. 文字會逐段出現，文字完成後再補講者標記。處理途中可先下載文字，或停止並保留已完成的部分。
 4. 完成後直接修改文字／講者，下載 TXT、CSV 或 SRT。點時間可播放對應錄音。
 
-**不需要 Python、FFmpeg、Start.command、API Key 或 AI 帳戶。** 網站本身已包含模型及運算程式。首次使用會自動載入約 250–310 MB 模型資源，之後盡量重用瀏覽器快取；清除瀏覽器資料後需要重新載入。
+**不需要 Python、FFmpeg、Start.command、API Key 或 AI 帳戶。** 網站本身已包含模型及運算程式。支援時自動使用 WebGPU，未能使用時改用 CPU。首次使用會自動載入約 250–600 MB 模型資源，視乎運算方式及講者設定；之後盡量重用瀏覽器快取。GPU 失敗而改用 CPU 時可能額外載入 CPU 模型；清除瀏覽器資料後需要重新載入。
 
 ## 長錄音與速度
 
 - 沒有每日使用分鐘或錄音時長配額。音訊以約 15 秒一段處理，不必等整段完成才看到文字。
-- 轉錄及講者分析由背景 Web Worker 執行。兩個大型模型依次載入，避免同時佔用大量記憶體。
+- 轉錄及講者分析由背景 Web Worker 執行。GPU 模式讓最多三個小型 CPU worker 在轉文字期間處理講者交界，再釋放大型語音模型、用 GPU 比較聲紋（每個局部講者最多抽取 3 秒純語音；10 秒交界視窗覆蓋全段錄音，避免重複計算）；兩個大型 GPU 模型不會同時載入。CPU 備用模式仍依序處理。
+- GPU 不支援、模型啟動失敗或運算中失效時，保留已完成文字並從下一段改用 CPU；若文字已完成，只重試講者分析。GPU 模式保留一份音訊恢復緩衝區，記憶體需求較 CPU 模式高。
 - 錄音仍須由瀏覽器讀取及解碼，因此可處理的長度受裝置記憶體、音訊格式及瀏覽器限制。長錄音建議使用電腦，並保持分頁開啟；不保證所有舊手機都能處理任意長度。
-- 第一次模型下載、模型初始化、實際轉錄是不同階段。網絡、硬件及錄音內容均會影響時間，不能保證與其他網站等速。
+- 第一次模型下載、模型初始化、實際轉錄是不同階段。完成畫面分開顯示「文字完成於」（包括載入）及「講者補標記」時間；GPU 模式的部分講者運算已在文字處理期間並行完成。網絡、硬件及錄音內容均會影響時間，不能保證每台裝置都能在 1–2 分鐘內處理 40 分鐘錄音。
 - 模型只略過完全為零的數碼靜音，不會因為說話細聲而自行丟棄該段。
 
 ## 支援與資料
@@ -34,6 +35,7 @@
 ## 模型與授權
 
 - 語音識別：SenseVoiceSmall（FunAudioLLM／阿里巴巴），INT8，透過 sherpa-onnx v1.12.35 官方 WebAssembly SIMD 發佈包。
+- GPU 語音識別：同一 SenseVoiceSmall 家族，FunASR ONNX 匯出，權重以 float16 儲存、運算保持 float32；ONNX Runtime Web 1.29.0。特徵提取以獨立 kaldi-native-fbank 黃金資料核對。
 - 講者分析：pyannote segmentation 3.0 與 3D-Speaker ERes2Net，透過 sherpa-onnx v1.13.7 官方發佈包。
 - 繁體轉換：OpenCC JS v1.4.2。
 - 本專案程式碼採 MIT；模型及第三方 runtime 採各自授權。SenseVoice 模型依 FunASR Model Open Source License Agreement 提供，並非本專案的 MIT 授權。
@@ -57,6 +59,6 @@ python3 -m venv .venv
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-舊 Mac 伴隨服務程式保留作開發及比較，公開網站已不依賴它。重新包裝模型可用 `tools/package-browser-assets.py`；來源為官方 sherpa-onnx GitHub release，正常使用者毋須執行。
+舊 Mac 伴隨服務程式保留作開發及比較，公開網站已不依賴它。重新包裝 CPU 模型可用 `tools/package-browser-assets.py`；來源為官方 sherpa-onnx GitHub release。GPU 模型可用 `tools/package-gpu-assets.py`，固定來源、完整 SHA256、ORT 版本及精度寫在腳本與 `models.json`；開發環境需安裝 `onnx==1.20.1` 和 NumPy，提供原始模型、`am.mvn`、`vocab.txt` 及 npm `onnxruntime-web@1.29.0` 的 `dist/` 目錄。正常使用者毋須執行。
 
 GitHub Actions 驗證程式後發佈 `web/` 至 Pages。

@@ -1,6 +1,6 @@
 import {exportTranscript,timestamp} from './exports.mjs';
 import {makeLines} from './engine-core.mjs';
-import {TranscriptionSession} from './transcription-session.mjs';
+import {TranscriptionSession} from './transcription-session.mjs?v=gpu-v1';
 import {MODEL_CACHE} from './model-cache.mjs';
 
 const $=id=>document.getElementById(id);
@@ -40,7 +40,7 @@ function addRows(newRows){
 }
 function replaceRows(chunks,turns){rows=[];$('lines').replaceChildren();addRows(makeLines(chunks,turns,converter));}
 const session=new TranscriptionSession({
- workerFactory:()=>new Worker(new URL('./inference-worker.js?v=browser-v2',import.meta.url)),
+ workerFactory:(kind,engine)=>new Worker(new URL(engine==='gpu'?'./gpu-worker.js?v=gpu-v1':'./inference-worker.js?v=gpu-v1',import.meta.url)),
  onPartial:chunks=>{
   for(const chunk of chunks.slice(renderedChunks))addRows(makeLines([chunk],[],converter));
   renderedChunks=chunks.length;
@@ -48,7 +48,9 @@ const session=new TranscriptionSession({
  onProgress:data=>{
   if(data.phase==='text-done'){
    textComplete=true;
-   textTime=data.metrics;status('文字已完成；準備講者分析',null);
+   textTime=performance.now();
+   $('timings').hidden=false;$('timings').textContent=`${data.metrics?.backend==='WebGPU'?'GPU':'CPU'} · 文字完成於 ${duration((textTime-runStart)/1000)}（包括模型載入）`;
+   status('文字已完成；準備講者分析',null);
    $('result-note').textContent='文字已出；正在補講者標記，完成後即可修改。你亦可先下載文字。';
   }else status(data.message,data.progress??null);
  },
@@ -60,6 +62,7 @@ const session=new TranscriptionSession({
   }else{
    const elapsed=(performance.now()-runStart)/1000;
    status(`完成，用時 ${duration(elapsed)}`,100);
+   if(textTime&&Number($('speakers').value)>1)$('timings').textContent+=` · 講者補標記 ${duration((performance.now()-textTime)/1000)}`;
    $('result-note').textContent='點時間播放錄音；文字同講者可以直接修改。自動結果仍需核對。';
   }
  },
@@ -72,7 +75,7 @@ function select(file){
  selected=file;error();$('file-name').textContent=file.name;
  $('file-help').textContent=`${(file.size/1048576).toFixed(1)} MB · 點擊更換錄音`;
  if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=URL.createObjectURL(file);$('audio').src=audioUrl;
- $('result').hidden=true;$('status-area').hidden=true;rows=[];$('lines').replaceChildren();controls();
+ $('result').hidden=true;$('status-area').hidden=true;$('timings').hidden=true;rows=[];$('lines').replaceChildren();controls();
 }
 $('file').addEventListener('change',e=>select(e.target.files[0]));
 for(const name of ['dragover','dragleave','drop'])$('dropzone').addEventListener(name,e=>{e.preventDefault();$('dropzone').classList.toggle('drag',name==='dragover');if(name==='drop')select(e.dataTransfer.files[0]);});
@@ -96,7 +99,7 @@ async function convertAudio(file,generation){
 }
 $('form').addEventListener('submit',async event=>{
  event.preventDefault();if(!selected||busy)return;
- busy=true;decoding=true;cancelDecode=false;renderedChunks=0;textTime=null;textComplete=false;runStart=performance.now();const generation=++decodeGeneration;
+ busy=true;decoding=true;cancelDecode=false;renderedChunks=0;textTime=null;textComplete=false;runStart=performance.now();$('timings').hidden=true;const generation=++decodeGeneration;
  controls();error();rows=[];$('lines').replaceChildren();$('result').hidden=true;$('result-note').textContent='逐段顯示文字；完整處理後可修改，亦可先下載目前內容。';
  status('讀取錄音；長錄音會自動分段',null);
  try{
@@ -106,7 +109,7 @@ $('form').addEventListener('submit',async event=>{
   const audio=await convertAudio(selected,generation);
   if(cancelDecode||generation!==decodeGeneration)throw new DOMException('已取消','AbortError');
   if(!audio.length)throw new Error('錄音冇可讀取嘅音訊，請檢查檔案。');
-  decoding=false;session.start(audio.buffer,Number($('speakers').value));
+  decoding=false;session.start(audio.buffer,Number($('speakers').value),{preferGpu:!!navigator.gpu});
  }catch(err){
   finish();
   if(err.name==='AbortError')status('已取消讀取錄音。',null);

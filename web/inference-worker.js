@@ -6,7 +6,7 @@ self.onmessage=async event=>{
   try {
     const {loadVerifiedParts}=await import('./model-cache.mjs');
     const {makeChunkRanges,isDigitalSilence}=await import('./engine-core.mjs');
-    const {type,audio,speakers}=event.data;
+    const {type,audio,speakers,resumeSeconds=0}=event.data;
     const kind=type==='speakers'?'speakers':'asr';
     const begin=performance.now();
     const response=await fetch('./models.json',{cache:'no-store'});
@@ -41,7 +41,7 @@ self.onmessage=async event=>{
       },Module);
       if(!recognizer.handle)throw new Error('粵語模型未能啟動。');
       loadedAt=performance.now();
-      const ranges=makeChunkRanges(samples.length,sampleRate);
+      const ranges=makeChunkRanges(samples.length,sampleRate).filter(r=>r.keepEnd/sampleRate>resumeSeconds);
       for(let i=0;i<ranges.length;i++) {
         const range=ranges[i],slice=samples.subarray(range.start,range.end);
         if(!isDigitalSilence(slice)) {

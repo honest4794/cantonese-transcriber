@@ -1,5 +1,27 @@
 Third-party browser inference assets
 
+GPU 加速（2026-11-08）：
+ONNX Runtime Web 1.29.0（Microsoft，MIT），npm onnxruntime-web 官方發佈包。
+https://github.com/microsoft/onnxruntime/tree/v1.29.0
+ort-1.29.0/ 內的 JavaScript、WASM 保持原樣；LICENSE 為原包授權。
+
+GPU SenseVoiceSmall 來源：FunAudioLLM / Tongyi Lab 原模型；
+ysdede/sensevoice-small-onnx 匯出版本 b6c40945d2759130ea312d14f92ddad079ba7933。
+https://huggingface.co/ysdede/sensevoice-small-onnx/tree/b6c40945d2759130ea312d14f92ddad079ba7933
+本網站只把權重改以 float16 儲存、運算維持 float32，並在圖內作 greedy CTC argmax；
+模型及資料的完整 SHA256、來源及版本載於 models.json，可用
+tools/package-gpu-assets.py 重現。模型授權仍為下列 FunASR Model Open Source License
+Agreement；匯出程式的 MIT 授權不取代原始模型權重授權。
+
+GPU 講者路徑重用下列官方 sherpa-onnx 包內的 segmentation / embedding 模型；
+沒有更換模型；GPU 聲紋包只把相同權重改以 float16 儲存、維持 float32 運算。
+快速講者路徑以不重疊 10 秒視窗覆蓋全段，每個局部講者抽取最多 3 秒純語音，
+以八段一批比較聲紋；仍保留短片段及重疊聲音的時間軸。JS 特徵提取及講者流程依照 kaldi-native-fbank 和
+sherpa-onnx 的 frame、mel、LFR、CMVN、powerset 和 complete-linkage 規則實作。
+https://github.com/csukuangfj/kaldi-native-fbank
+https://github.com/k2-fsa/sherpa-onnx
+兩者為 Apache-2.0；Apache-2.0 授權全文見 sherpa-LICENSE.txt。
+
 This website runs all audio inference on the user's device. It does not use a
 paid inference API. The following prebuilt resources are redistributed with
 their applicable upstream licenses; the MIT license of this application does

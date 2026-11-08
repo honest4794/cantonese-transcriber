@@ -62,5 +62,119 @@
       "dataSha256": "59961f3445655861b8dbb9bcb5504bfb4ebd7ff08f734868d9642e302fee7088",
       "sherpaVersion": "1.13.7"
     }
+  },
+  "gpu": {
+    "version": 3,
+    "source": "https://huggingface.co/ysdede/sensevoice-small-onnx/resolve/b6c40945d2759130ea312d14f92ddad079ba7933/model.onnx",
+    "sourceSha256": "8fc794f08c390ce26f0c8878904a2e0a63214faaa53e2354245a50c0d2b65700",
+    "onnxRuntimeVersion": "1.29.0",
+    "precision": "fp16 weights / fp32 computation",
+    "asrBatch": 1,
+    "speakerBatch": 8,
+    "speakerMaxSamples": 48000,
+    "segmentationShiftSamples": 160000,
+    "model": {
+      "parts": [
+        {
+          "url": "./assets/gpu-sensevoice-2026-11-08/model-00.bin",
+          "bytes": 50331648,
+          "sha256": "0457ee47803986eec90bdfe6d5c96fe2aae653e17e358072785d558038294881"
+        },
+        {
+          "url": "./assets/gpu-sensevoice-2026-11-08/model-01.bin",
+          "bytes": 50331648,
+          "sha256": "38392fbe96298d6f4d15cc94a29e3dc4613e292d37520bfa984e482dfbc31a9d"
+        },
+        {
+          "url": "./assets/gpu-sensevoice-2026-11-08/model-02.bin",
+          "bytes": 50331648,
+          "sha256": "f84fa43b480b6884d2a9a596d77f1901067cfa5b6cc3f2a66f1aa745254b214a"
+        },
+        {
+          "url": "./assets/gpu-sensevoice-2026-11-08/model-03.bin",
+          "bytes": 50331648,
+          "sha256": "4e227570383ca476d69a833969c8e5729f8b64a61af86440a431d6efa9ab751d"
+        },
+        {
+          "url": "./assets/gpu-sensevoice-2026-11-08/model-04.bin",
+          "bytes": 50331648,
+          "sha256": "a95065758bb696d57c1e39f06ae9e8708a7fa3f6aaa57cc9398d544d8e4e2d94"
+        },
+        {
+          "url": "./assets/gpu-sensevoice-2026-11-08/model-05.bin",
+          "bytes": 50331648,
+          "sha256": "04b8ce04817946aa8530fa2ca2588d87914a0ad7f846c363189b0e778552dbdf"
+        },
+        {
+          "url": "./assets/gpu-sensevoice-2026-11-08/model-06.bin",
+          "bytes": 50331648,
+          "sha256": "f1f3baf9fa45a6bcc59a8bc9477aa84d57956a0d63c0bbdfecb0f6d44a104e42"
+        },
+        {
+          "url": "./assets/gpu-sensevoice-2026-11-08/model-07.bin",
+          "bytes": 50331648,
+          "sha256": "0f2770d02c64ba992f34579019a7a3c68ebd80c73ec552a8e2b2f7b9db3bdbcd"
+        },
+        {
+          "url": "./assets/gpu-sensevoice-2026-11-08/model-08.bin",
+          "bytes": 50331648,
+          "sha256": "c764a0c5e2ab20fe8968a8c8088d843d8b0d72b10b22dbc498e6f8d8a80bfcc1"
+        },
+        {
+          "url": "./assets/gpu-sensevoice-2026-11-08/model-09.bin",
+          "bytes": 16749685,
+          "sha256": "eb5518d2f27b7d7cfd8666fbe1aabf555ff0f7b98c2a5d976fa45ef064b4c904"
+        }
+      ],
+      "bytes": 469734517,
+      "sha256": "3eac6e046dcf5d0b705834ef5e09385cd3d221e4feb12a96b72095793216ded1"
+    },
+    "embedding": {
+      "url": "./assets/gpu-sensevoice-2026-11-08/embedding-00.bin",
+      "bytes": 19860929,
+      "sha256": "e80a853ab6101efc9b3069edef32a3beb4027a66598732f65a9a38cbb6a6dbde"
+    },
+    "cmvn": {
+      "url": "./assets/gpu-sensevoice-2026-11-08/cmvn.json",
+      "bytes": 12225,
+      "sha256": "1f01150dd0ef72ca1233a94b126640f8f09b1cc2ef67479ce22ac1aab37322ba"
+    },
+    "vocab": {
+      "url": "./assets/gpu-sensevoice-2026-11-08/vocab.json",
+      "bytes": 251842,
+      "sha256": "3a7653d4065e3aa7f6f5b968d438a6f016d1fb990e82789928917788ca6b3b0a"
+    },
+    "runtime": [
+      {
+        "url": "./vendor/ort-1.29.0/ort.webgpu.min.mjs",
+        "bytes": 66348,
+        "sha256": "08272eb8dadd249a0eaa53e19f4e5b5d01bc8a121240719db29093cfb776bc27"
+      },
+      {
+        "url": "./vendor/ort-1.29.0/ort.wasm.min.mjs",
+        "bytes": 50126,
+        "sha256": "14a0a63ad1a0fe8127722929fd16fb26c2e5352ea221bc9034d12daf314d0b92"
+      },
+      {
+        "url": "./vendor/ort-1.29.0/ort-wasm-simd-threaded.asyncify.mjs",
+        "bytes": 51407,
+        "sha256": "5d25483158d53d8f34d0e9c06a654d56c8dca4ebdf370ea0982ef11315a00e0e"
+      },
+      {
+        "url": "./vendor/ort-1.29.0/ort-wasm-simd-threaded.asyncify.wasm",
+        "bytes": 25749873,
+        "sha256": "503d17cb7411b79781b9fad1cf0978f03cf06b050c7d399c730e914f473bf549"
+      },
+      {
+        "url": "./vendor/ort-1.29.0/ort-wasm-simd-threaded.mjs",
+        "bytes": 24218,
+        "sha256": "5a15f1fd086b3f6c2baf1f35105b8f502653b567e165cef80028870b39748747"
+      },
+      {
+        "url": "./vendor/ort-1.29.0/ort-wasm-simd-threaded.wasm",
+        "bytes": 13961845,
+        "sha256": "ec8580a9d7b9476ceee52e10a7f94124e4dc71a019d666ed6d4726697c109a4d"
+      }
+    ]
   }
 }

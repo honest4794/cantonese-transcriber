@@ -141,3 +141,42 @@ test('cancel between completed ASR and speaker startup retains complete-text sta
   assert.equal(complete.textComplete,true);
   assert.equal(workers.length,1);
 });
+test('GPU retains its worker through speaker processing and reports separate metrics',()=>{
+ const workers=[];let complete;
+ const session=new TranscriptionSession({workerFactory:(kind,engine)=>{const w=new WorkerStub(kind,[]);w.engine=engine;workers.push(w);return w;},onComplete:r=>complete=r});
+ session.start(new Float32Array(16000).buffer,2,{preferGpu:true});
+ assert.equal(workers[0].engine,'gpu');
+ workers[0].emit({type:'chunk',chunk:{tokens:['好'],timestamps:[0],end:1}});
+ workers[0].emit({type:'asr-done',duration:1,continueSpeakers:true,metrics:{inferenceMs:20}});
+ assert.equal(workers[0].terminated,false);assert.equal(session.phase,'speakers');
+ workers[0].emit({type:'speaker-done',turns:[{start:0,end:1,speaker:0}],metrics:{inferenceMs:10}});
+ assert.equal(complete.metrics.asr.inferenceMs,20);assert.equal(complete.metrics.speakers.inferenceMs,10);
+ assert.equal(workers.length,1);assert.equal(workers[0].terminated,true);
+});
+test('GPU failure resumes WASM after completed chunks and ignores late GPU messages',()=>{
+ const workers=[];let complete;
+ const session=new TranscriptionSession({workerFactory:(kind,engine)=>{const w=new WorkerStub(kind,[]);w.engine=engine;workers.push(w);return w;},onComplete:r=>complete=r});
+ session.start(new Float32Array(480000).buffer,0,{preferGpu:true});
+ const gpu=workers[0];gpu.emit({type:'chunk',chunk:{tokens:['前'],timestamps:[0],end:15}});
+ gpu.emit({type:'error',message:'device lost'});
+ assert.equal(gpu.terminated,true);assert.equal(workers[1].engine,'wasm');assert.equal(workers[1].sent.resumeSeconds,15);
+ gpu.emit({type:'chunk',chunk:{tokens:['過期'],timestamps:[0],end:15}});
+ workers[1].emit({type:'chunk',chunk:{tokens:['後'],timestamps:[15],end:30}});
+ workers[1].emit({type:'asr-done',duration:30});
+ assert.deepEqual(complete.chunks.map(c=>c.tokens[0]),['前','後']);assert.equal(session.recoveryAudio,null);
+});
+test('GPU failure during speaker analysis retries only speakers and keeps the complete text',()=>{
+ const workers=[];const session=new TranscriptionSession({workerFactory:(kind,engine)=>{const w=new WorkerStub(kind,[]);w.engine=engine;workers.push(w);return w;}});
+ session.start(new Float32Array(16000).buffer,2,{preferGpu:true});
+ workers[0].emit({type:'chunk',chunk:{tokens:['全文'],timestamps:[0],end:1}});
+ workers[0].emit({type:'asr-done',duration:1,continueSpeakers:true});
+ workers[0].onerror({message:'GPU process crashed'});
+ assert.equal(workers[1].kind,'speakers');assert.equal(workers[1].engine,'wasm');assert.equal(session.textComplete,true);assert.equal(session.chunks.length,1);
+ session.cancel();assert.equal(session.recoveryAudio,null);assert.equal(workers[1].terminated,true);
+});
+test('GPU allocation failure falls back once and a WASM failure still exits the busy state',()=>{
+ let attempted=0,failure;
+ const session=new TranscriptionSession({workerFactory:(kind,engine)=>{attempted++;throw Error(engine+' unavailable');},onError:message=>failure=message});
+ session.start(new Float32Array(16000).buffer,0,{preferGpu:true});
+ assert.equal(attempted,2);assert.equal(session.phase,'error');assert.ok(failure);assert.equal(session.recoveryAudio,null);
+});
