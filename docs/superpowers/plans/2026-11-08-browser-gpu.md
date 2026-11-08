@@ -45,6 +45,8 @@
 - [x] 先測試不支援 GPU、初始化失敗、運算中失敗、取消及過期訊息。
 - [x] 接上自動選擇及清楚分項耗時；保留原本簡單版面。
 - [x] 真實完整 40 分鐘錄音驗證時間、逐段文字、尾段、講者、取消及匯出；記錄限制。
-- [ ] 全部測試、獨立 review、task-only commit／push／Pages 公開檔案驗證。
+- [x] 全部測試、獨立 review、task-only commit／push／Pages 公開檔案驗證。
 
 實際驗證：39 項 Node、10 項 Python 測試通過；獨立 reviewer 核准 `f3157fa`，無待修問題。40 分 21 秒真實錄音在完整網頁約 3 分 16 秒完成（M2／8GB／Chrome157／低電量模式；首次網絡下載另計），892 行、390px 無橫向溢出，修改後 TXT／CSV／SRT 均通過。真實 GPUDevice.destroy 注入後，自動啟動兩個 CPU 階段完成餘下文字及講者；取消則保留初稿，三種匯出均標示部分稿件。
+
+交付：`25e00f3` 的 [GitHub Actions 驗證與部署](https://github.com/honest4794/cantonese-transcriber/actions/runs/42492010472) 成功；公開 HTML／JS／CSS 與本機來源一致，GPU 模型清單、全部分片及 runtime 的公開大小／檔案前綴均核對。舊版 HTML 搭新版 JS 的快取情境已在真實 Chrome 重現並修正（開始按鈕可用、無錯誤），39 項 Node 測試再次通過。網站：https://honest4794.github.io/cantonese-transcriber/
