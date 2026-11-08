@@ -4,7 +4,7 @@ self.onmessage=async event=>{
   if(started)return;
   started=true;
   try {
-    const {loadVerifiedParts}=await import('./model-cache.mjs');
+    const {loadVerifiedResources,modelLoadingProgress}=await import('./model-cache.mjs?v=loading-v1');
     const {makeChunkRanges,isDigitalSilence}=await import('./engine-core.mjs');
     const {type,audio,speakers,resumeSeconds=0}=event.data;
     const kind=type==='speakers'?'speakers':'asr';
@@ -13,10 +13,9 @@ self.onmessage=async event=>{
     if(!response.ok)throw new Error('模型設定載入失敗，請重新整理網頁。');
     const manifest=await response.json(),model=manifest.models[kind],sampleRate=manifest.sampleRate;
     const name=kind==='asr'?'粵語':'講者';
-    self.postMessage({type:'progress',phase:'loading',message:`首次自動載入${name}模型；之後會重用快取`,progress:null});
     const resolve=part=>({...part,url:new URL(part.url,self.location.href).href});
-    const wasm=await loadVerifiedParts([resolve(model.wasm)]);
-    const data=await loadVerifiedParts(model.data.map(resolve),{onProgress:({loaded,total,cached})=>self.postMessage({type:'progress',phase:'loading',message:`${cached?'讀取快取':'載入'}${name}模型 ${Math.round(loaded/1048576)} / ${Math.round(total/1048576)} MB`,progress:100*loaded/total})});
+    const pending=loadVerifiedResources({wasm:[resolve(model.wasm)],data:model.data.map(resolve)},{onProgress:info=>self.postMessage(modelLoadingProgress(info,`${name}模型`))});
+    const [wasm,data]=await Promise.all([pending.wasm,pending.data]);
     self.postMessage({type:'progress',phase:'initializing',message:`初始化${name}模型`,progress:null});
     await new Promise((resolveReady,reject)=>{
       self.Module={

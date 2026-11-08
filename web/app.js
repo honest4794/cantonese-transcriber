@@ -44,7 +44,7 @@ function addRows(newRows){
 }
 function replaceRows(chunks,turns){rows=[];$('lines').replaceChildren();addRows(makeLines(chunks,turns,converter));}
 const session=new TranscriptionSession({
- workerFactory:(kind,engine)=>new Worker(new URL(engine==='gpu'?'./gpu-worker.js?v=gpu-v1':'./inference-worker.js?v=gpu-v1',import.meta.url)),
+ workerFactory:(kind,engine)=>new Worker(new URL(engine==='gpu'?'./gpu-worker.js?v=loading-v1':'./inference-worker.js?v=loading-v1',import.meta.url)),
  onPartial:chunks=>{
   for(const chunk of chunks.slice(renderedChunks))addRows(makeLines([chunk],[],converter));
   renderedChunks=chunks.length;

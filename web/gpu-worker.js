@@ -6,23 +6,19 @@ self.onmessage=async({data})=>{
  try {
   const begin=performance.now();
   if(!self.navigator.gpu||!await self.navigator.gpu.requestAdapter({powerPreference:'high-performance'}))throw Error('此瀏覽器未能使用 GPU');
-  const [{loadVerifiedParts},{Fbank,stackSenseVoice,subtractMean},{makeChunkRanges,isDigitalSilence},{decodeCtc,clusterEmbeddings,speakerSamples,speakerTurns},{SegmentationPool},ort]=await Promise.all([
-   import('./model-cache.mjs'),import('./audio-features.mjs'),import('./engine-core.mjs'),import('./gpu-engine.mjs'),import('./segmentation-pool.mjs'),import('./vendor/ort-1.29.0/ort.webgpu.min.mjs'),
+  const [{loadVerifiedResources,modelLoadingProgress},{Fbank,stackSenseVoice,subtractMean},{makeChunkRanges,isDigitalSilence},{decodeCtc,clusterEmbeddings,speakerSamples,speakerTurns},{SegmentationPool},ort]=await Promise.all([
+   import('./model-cache.mjs?v=loading-v1'),import('./audio-features.mjs'),import('./engine-core.mjs'),import('./gpu-engine.mjs'),import('./segmentation-pool.mjs'),import('./vendor/ort-1.29.0/ort.webgpu.min.mjs'),
   ]);
   const response=await fetch('./models.json',{cache:'no-store'});if(!response.ok)throw Error('模型設定未能載入');
   const manifest=await response.json(),gpu=manifest.gpu;if(!gpu)throw Error('GPU 模型尚未提供');
   const resolve=part=>({...part,url:new URL(part.url,self.location.href).href});
-  const load=(parts,options)=>loadVerifiedParts(parts.map(resolve),options);
-  const json=async part=>JSON.parse(new TextDecoder().decode(await load([part])));
   const samples=new Float32Array(data.audio),duration=samples.length/16000,wantSpeakers=data.speakers>1;
-  self.postMessage({type:'progress',phase:'loading',message:'載入本機 GPU 加速模型；錄音唔會上傳',progress:null});
-  const speakerPromise=wantSpeakers?Promise.all([
-   load(manifest.models.speakers.data),load([gpu.runtime.find(p=>p.url.endsWith('/ort-wasm-simd-threaded.wasm'))]),load([gpu.embedding]),
-  ]).then(value=>({value}),error=>({error})):null;
-  let [model,wasm,cmvn,vocab]=await Promise.all([
-   load(gpu.model.parts,{onProgress:({loaded,total,cached})=>self.postMessage({type:'progress',phase:'loading',message:`${cached?'讀取快取':'載入'} GPU 模型 ${Math.round(loaded/1048576)} / ${Math.round(total/1048576)} MB`,progress:100*loaded/total})}),
-   load([gpu.runtime.find(p=>p.url.endsWith('.asyncify.wasm'))]),json(gpu.cmvn),json(gpu.vocab),
-  ]);
+  const resources={model:gpu.model.parts,wasm:[gpu.runtime.find(p=>p.url.endsWith('.asyncify.wasm'))],cmvn:[gpu.cmvn],vocab:[gpu.vocab]};
+  if(wantSpeakers)Object.assign(resources,{speakers:manifest.models.speakers.data,speakerWasm:[gpu.runtime.find(p=>p.url.endsWith('/ort-wasm-simd-threaded.wasm'))],embedding:[gpu.embedding]});
+  const downloads=loadVerifiedResources(Object.fromEntries(Object.entries(resources).map(([key,parts])=>[key,parts.map(resolve)])),{onProgress:info=>self.postMessage(modelLoadingProgress(info,'GPU 模型'))});
+  const speakerPromise=wantSpeakers?Promise.all([downloads.speakers,downloads.speakerWasm,downloads.embedding]).then(value=>({value}),error=>({error})):null;
+  const json=promise=>promise.then(bytes=>JSON.parse(new TextDecoder().decode(bytes)));
+  let [model,wasm,cmvn,vocab]=await Promise.all([downloads.model,downloads.wasm,json(downloads.cmvn),json(downloads.vocab)]);
   ort.env.wasm.numThreads=1;ort.env.wasm.wasmPaths=new URL('./vendor/ort-1.29.0/',self.location.href).href;ort.env.wasm.wasmBinary=new Uint8Array(wasm);wasm=null;
   self.postMessage({type:'progress',phase:'initializing',message:'初始化 GPU 粵語模型',progress:null});
   asr=await ort.InferenceSession.create(new Uint8Array(model),{executionProviders:['webgpu'],graphOptimizationLevel:'all'});model=null;
